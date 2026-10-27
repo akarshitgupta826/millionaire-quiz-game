@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Millionaire Quiz Game</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: white;
+      background: radial-gradient(circle, #102b63, #030817 75%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .game {
+      width: 100%;
+      max-width: 750px;
+      text-align: center;
+    }
+    h1 { color: #ffd45c; }
+    .prize {
+      color: #ffd45c;
+      font-size: 22px;
+      margin: 15px;
+    }
+    .question {
+      background: #102b63;
+      border: 2px solid #e8bd49;
+      border-radius: 18px;
+      padding: 22px;
+      margin: 22px 0;
+      font-size: 21px;
+    }
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    button {
+      cursor: pointer;
+      border: 2px solid #e8bd49;
+      border-radius: 30px;
+      padding: 15px;
+      font-size: 16px;
+      color: white;
+      background: #102b63;
+    }
+    button:hover:not(:disabled) {
+      background: #254e9c;
+    }
+    button:disabled { cursor: default; opacity: .7; }
+    .lifelines { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:20px 0; }
+    .lifelines button { background:#6545a8; }
+    #message { min-height: 28px; font-weight: bold; margin: 15px; }
+    #restart { background: #d5a51b; color: #101010; }
+    @media(max-width:480px) {
+      .options { grid-template-columns: 1fr; }
+      .question { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>🏆 MILLIONAIRE QUIZ</h1>
+    <p>Har sahi jawab tumhe manzil ke kareeb le jayega!</p>
+    <div class="prize">Current Prize: ₹<span id="prize">0</span></div>
+    <div id="progress">Question 1 / 10</div>
+    <div class="question" id="question">Game shuru ho raha hai...</div>
+    <div class="options" id="options"></div>
+
+    <div class="lifelines">
+      <button id="fifty" onclick="use5050()">50:50 Lifeline</button>
+      <button id="skip" onclick="skipQuestion()">Skip Question</button>
+    </div>
+
+    <div id="message" aria-live="polite"></div>
+    <button id="restart" onclick="restartGame()">🔄 Play Again</button>
+  </main>
+
+  <script>
+    const questions = [
+      {q:"Bharat ki rajdhani kya hai?",o:["Mumbai","New Delhi","Jaipur","Lucknow"],a:1},
+      {q:"Surya ke sabse paas ka grah kaun sa hai?",o:["Earth","Mars","Mercury","Jupiter"],a:2},
+      {q:"Computer ka brain kise kaha jata hai?",o:["Mouse","CPU","Keyboard","Monitor"],a:1},
+      {q:"Taj Mahal kis shahar mein hai?",o:["Agra","Delhi","Bhopal","Patna"],a:0},
+      {q:"Ek week mein kitne din hote hain?",o:["5","6","7","8"],a:2},
+      {q:"HTML ka use kis liye hota hai?",o:["Web pages","Cooking","Painting walls","Driving"],a:0},
+      {q:"Duniya ka sabse bada ocean kaun sa hai?",o:["Indian","Arctic","Atlantic","Pacific"],a:3},
+      {q:"Plants photosynthesis mein kaunsi gas lete hain?",o:["Oxygen","Carbon dioxide","Helium","Hydrogen"],a:1},
+      {q:"Python mein function define karne ka keyword kya hai?",o:["func","define","def","function"],a:2},
+      {q:"Bharat ka rashtriya pashu kaun hai?",o:["Lion","Tiger","Elephant","Leopard"],a:1}
+    ];
+
+    const prizes = [1000,2000,5000,10000,20000,40000,80000,160000,320000,1000000];
+    let current = 0, winnings = 0, locked = false;
+    let used5050 = false, usedSkip = false, hidden = [];
+
+    function render() {
+      locked = false;
+      hidden = [];
+      document.getElementById("progress").textContent =
+        `Question ${current + 1} / ${questions.length}`;
+      document.getElementById("prize").textContent = winnings.toLocaleString("en-IN");
+      document.getElementById("question").textContent = questions[current].q;
+      document.getElementById("message").textContent = "";
+      const box = document.getElementById("options");
+      box.innerHTML = "";
+      questions[current].o.forEach((option, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = `${"ABCD"[i]}. ${option}`;
+        btn.onclick = () => answer(i);
+        btn.dataset.index = i;
+        box.appendChild(btn);
+      });
+      document.getElementById("fifty").disabled = used5050;
+      document.getElementById("skip").disabled = usedSkip;
+    }
+
+    function answer(index) {
+      if (locked || hidden.includes(index)) return;
+      locked = true;
+      const correct = questions[current].a;
+      const buttons = [...document.querySelectorAll("#options button")];
+      buttons.forEach(b => b.disabled = true);
+
+      if (index === correct) {
+        winnings = prizes[current];
+        document.getElementById("prize").textContent = winnings.toLocaleString("en-IN");
+        document.getElementById("message").textContent = "✅ Bilkul sahi jawab!";
+        document.getElementById("message").style.color = "#7dff9b";
+        if (current === questions.length - 1) {
+          document.getElementById("message").textContent = "🏆 Mubarak ho! Aap millionaire ban gaye!";
+          return;
+        }
+        current++;
+        setTimeout(render, 1100);
+      } else {
+        document.getElementById("message").textContent =
+          `❌ Game Over! Sahi jawab: ${questions[current].o[correct]}. Aap jeete ₹${winnings.toLocaleString("en-IN")}.`;
+        document.getElementById("message").style.color = "#ff8d8d";
+      }
+    }
+
+    function use5050() {
+      if (used5050 || locked) return;
+      used5050 = true;
+      const correct = questions[current].a;
+      const wrong = [0,1,2,3].filter(i => i !== correct);
+      wrong.sort(() => Math.random() - 0.5);
+      hidden = wrong.slice(0,2);
+      document.querySelectorAll("#options button").forEach((b,i) => {
+        if (hidden.includes(i)) {
+          b.disabled = true;
+          b.style.visibility = "hidden";
+        }
+      });
+      document.getElementById("fifty").disabled = true;
+    }
+
+    function skipQuestion() {
+      if (usedSkip || locked) return;
+      usedSkip = true;
+      document.getElementById("message").textContent = "⏭️ Question skip kiya!";
+      document.getElementById("message").style.color = "#ffd45c";
+      if (current === questions.length - 1) {
+        document.getElementById("message").textContent += " Game complete!";
+        locked = true;
+        return;
+      }
+      current++;
+      setTimeout(render, 500);
+    }
+
+    function restartGame() {
+      current = 0; winnings = 0; locked = false;
+      used5050 = false; usedSkip = false; hidden = [];
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>
